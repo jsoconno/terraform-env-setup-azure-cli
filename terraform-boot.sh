@@ -11,6 +11,7 @@ STORAGE_ACCOUNT_NAME="somename$ENVIRONMENT"
 STATE_CONTAINER_NAME="state"
 PLAN_CONTAINER_NAME="plan"
 KEY_VAULT_NAME="some-name-$ENVIRONMENT"
+SERVICE_PRINCIPAL_NAME="sp-terraform-$ENVIRONMENT"
 TAGS="environment=$ENVIRONMENT"
 CLEAN_UP=true
 
@@ -49,7 +50,7 @@ echo "$TERRAFORM_BACKEND" > "terraform-backend-$ENVIRONMENT.tf"
 
 # 6. Create the service principal for the target environment
 export MSYS_NO_PATHCONV=1
-SP_CREDENTIALS=$(az ad sp create-for-rbac --name sp-rides-terraform-$ENVIRONMENT --role Contributor --scopes /subscriptions/$SUBSCRIPTION_ID)
+SP_CREDENTIALS=$(az ad sp create-for-rbac --name $SERVICE_PRINCIPAL_NAME --role Contributor --scopes /subscriptions/$SUBSCRIPTION_ID)
 echo "$SP_CREDENTIALS" > "credentials-$ENVIRONMENT.json"
 
 # X. Clean up (optional)
@@ -57,8 +58,8 @@ if [ $CLEAN_UP = true ]
 then
     az group delete --name $RESOURCE_GROUP_NAME
     az keyvault purge --name $KEY_VAULT_NAME
-    SPN_ID=$(az ad sp list --all --query "[?displayName=='sp-rides-terraform-$ENVIRONMENT'].appId" -o tsv)
-    APP_ID=$(az ad app list --all --query "[?displayName=='sp-rides-terraform-$ENVIRONMENT'].appId" -o tsv)
+    SPN_ID=$(az ad sp list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].appId" -o tsv)
+    APP_ID=$(az ad app list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].appId" -o tsv)
     az ad sp delete --id $SPN_ID
     az ad app delete --id $APP_ID
 fi
