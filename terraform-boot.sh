@@ -33,7 +33,7 @@ az storage container create --name $PLAN_CONTAINER_NAME --account-name $STORAGE_
 # 5. Create key vault for secrets management
 az keyvault create --resource-group $RESOURCE_GROUP_NAME --location $RESOURCE_GROUP_LOCATION --name $KEY_VAULT_NAME
 
-# 5. Get Terraform backend configuration
+# 6. Get Terraform backend configuration
 TERRAFORM_BACKEND=$(cat <<EOF
 terraform {
     backend "azurerm" {
@@ -48,7 +48,7 @@ EOF
 )
 echo "$TERRAFORM_BACKEND" > "terraform-backend-$ENVIRONMENT.tf"
 
-# 6. Create the service principal for the target environment
+# 7. Create the service principal for the target environment
 export MSYS_NO_PATHCONV=1
 SP_CREDENTIALS=$(az ad sp create-for-rbac --name $SERVICE_PRINCIPAL_NAME --role Contributor --scopes /subscriptions/$SUBSCRIPTION_ID)
 echo "$SP_CREDENTIALS" > "credentials-$ENVIRONMENT.json"
