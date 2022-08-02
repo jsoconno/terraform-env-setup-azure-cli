@@ -12,7 +12,7 @@ PLAN_CONTAINER_NAME="plan"
 KEY_VAULT_NAME="terraform-$UNIQUE_VALUE-$ENVIRONMENT"
 SERVICE_PRINCIPAL_NAME="sp-terraform-$ENVIRONMENT"
 TAGS="environment=$ENVIRONMENT"
-CLEAN_UP=true
+CLEAN_UP=false
 
 # 1. Sign into Azure with az login
 az login
