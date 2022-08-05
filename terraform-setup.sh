@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 0. Set variables
-SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000"
+SUBSCRIPTION_ID="00000000-0000-0000-00000-000000000000"
 ENVIRONMENT="dev"
 UNIQUE_VALUE=$RANDOM
 RESOURCE_GROUP_NAME="terraform-$UNIQUE_VALUE-$ENVIRONMENT"
@@ -10,7 +10,7 @@ STORAGE_ACCOUNT_NAME="terraform$UNIQUE_VALUE$ENVIRONMENT"
 STATE_CONTAINER_NAME="state"
 PLAN_CONTAINER_NAME="plan"
 KEY_VAULT_NAME="terraform-$UNIQUE_VALUE-$ENVIRONMENT"
-SERVICE_PRINCIPAL_NAME="sp-terraform-$ENVIRONMENT"
+SERVICE_PRINCIPAL_NAME="sp-terraform-$RANDOM-$ENVIRONMENT"
 TAGS="environment=$ENVIRONMENT"
 CLEAN_UP=false
 
@@ -36,17 +36,37 @@ SP_CREDENTIALS=$(az ad sp create-for-rbac --name $SERVICE_PRINCIPAL_NAME)
 echo "$SP_CREDENTIALS" > "credentials-$ENVIRONMENT.json"
 SPN_ID=$(az ad sp list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].id" -o tsv)
 APP_ID=$(az ad app list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].id" -o tsv)
+CLIENT_ID=$(az ad app list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].appId" -o tsv)
 CLIENT_SECRET=$(grep -o '"password": "[^"]*' credentials-$ENVIRONMENT.json | grep -o '[^"]*$')
 
-# 6. Assign service principal roles and permissions
+# 6. Assign service principal IAM permissions
 az role assignment create --assignee $SPN_ID --role "Owner" --scope /subscriptions/$SUBSCRIPTION_ID
 az role assignment create --assignee $SPN_ID --role "Contributor" --scope /subscriptions/$SUBSCRIPTION_ID
 
-# 7. Create the key vault and add an access policy for Terraform
+# 7. Assign service principal API permissions
+MICROSOFT_GRAPH_API_ID="00000003-0000-0000-c000-000000000000"
+USER_READ_ALL_ID="df021288-bdef-4463-88db-98f22de89214=Role"
+GROUP_READ_ALL_ID="5b567255-7703-4780-807c-7be8301ae99b=Role"
+DOMAIN_READ_ALL_ID="dbb9058a-0e50-45d7-ae91-66909b5d4664=Role"
+DIRECTORY_READ_ALL_ID="7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role"
+APPLICATION_READ_ALL_ID="9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30=Role"
+APPLICATION_READ_WRITE_OWNED_BY_ID="18a4783c-866b-4cc7-a460-3d5e5662c884=Role"
+
+az ad app permission add --id $CLIENT_ID --api $MICROSOFT_GRAPH_API_ID --api-permissions \
+    $USER_READ_ALL_ID \
+    $GROUP_READ_ALL_ID \
+    $DOMAIN_READ_ALL_ID \
+    $DIRECTORY_READ_ALL_ID \
+    $APPLICATION_READ_ALL_ID \
+    $APPLICATION_READ_WRITE_OWNED_BY_ID
+
+az ad app permission admin-consent --id $CLIENT_ID
+
+# 8. Create the key vault and add an access policy for Terraform
 az keyvault create --resource-group $RESOURCE_GROUP_NAME --location $RESOURCE_GROUP_LOCATION --name $KEY_VAULT_NAME
 az keyvault set-policy --name $KEY_VAULT_NAME --secret-permissions all --key-permissions all --certificate-permissions all --object-id $APP_ID
 
-# 8. Create a working Terraform test script to validate credentials
+# 9. Create a working Terraform test script to validate credentials
 TENANT_ID=$(az account show --query tenantId -o tsv)
 CLIENT_ID=$(az ad app list --all --query "[?displayName=='$SERVICE_PRINCIPAL_NAME'].appId" -o tsv)
 TERRAFORM_BACKEND=$(cat <<EOF
@@ -83,7 +103,7 @@ EOF
 )
 echo "$TERRAFORM_BACKEND" > "terraform-backend-$ENVIRONMENT.tf"
 
-# 9. Create a file to make running Terraform code simpler
+# 10. Create a file to make running Terraform code simpler
 TERRAFORM_RUN=$(cat <<EOF
 az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
 terraform init
