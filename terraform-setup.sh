@@ -64,7 +64,7 @@ az ad app permission admin-consent --id $CLIENT_ID
 
 # 8. Create the key vault and add an access policy for Terraform
 az keyvault create --resource-group $RESOURCE_GROUP_NAME --location $RESOURCE_GROUP_LOCATION --name $KEY_VAULT_NAME
-az keyvault set-policy --name $KEY_VAULT_NAME --secret-permissions all --key-permissions all --certificate-permissions all --object-id $APP_ID
+az keyvault set-policy --name $KEY_VAULT_NAME --secret-permissions all --key-permissions all --certificate-permissions all --object-id $SPN_ID
 
 # 9. Create a working Terraform test script to validate credentials
 TENANT_ID=$(az account show --query tenantId -o tsv)
